@@ -1,9 +1,13 @@
 package com.codephillip.app.ocrgooglevision;
 
+import android.app.ProgressDialog;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.support.v7.app.AppCompatActivity;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
@@ -15,25 +19,40 @@ import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
+import java.io.IOException;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 /**
  * ABOUT:
  * (OCR) Extract text from image using Google Vision api
- *
+ * <p>
  * NOTE:
  * Make sure the device has atleast 400mb of RAM
  * Atleast 3GB of storage
  * Device must have Google Play Services installed
- *
+ * <p>
  * CREDIT:
  * https://www.youtube.com/watch?v=f4HUUPs91kw
  * https://stackoverflow.com/questions/32099530/google-vision-barcode-library-not-found/32123937#32123937
- * */
+ */
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "OCR";
     private Button takePicture;
     private ImageView picture;
     private TextView textView;
+    private Bitmap bmp;
+
+    public static final MediaType JSON
+            = MediaType.parse("application/json; charset=utf-8");
+
+    OkHttpClient client = new OkHttpClient();
+    private ProgressDialog pDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,11 +66,112 @@ public class MainActivity extends AppCompatActivity {
         takePicture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                processImage();
+                captureImage();
+//                processImageOnline();
+//                processImage();
             }
         });
+    }
+
+    private void captureImage() {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        startActivityForResult(intent, 0);
+    }
+
+    //called after captureImage()
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            Bundle extras = data.getExtras();
+            bmp = (Bitmap) extras.get("data");
+            picture.setImageBitmap(bmp);
+
+            Log.d(TAG, "onActivityResult: starting async task");
+            AsyncTaskRunner runner = new AsyncTaskRunner();
+            runner.execute();
+        }
+    }
+
+    private class AsyncTaskRunner extends AsyncTask<String, String, String> {
+
+        private String response;
+
+        @Override
+        protected String doInBackground(String... params) {
+            try {
+                return processImageOnline();
+            } catch (Exception e) {
+                e.printStackTrace();
+                response = e.getMessage();
+            }
+            return response;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            Log.d(TAG, "onPostExecute: " + result);
+            dismissProgressDialog();
+        }
+
+        @Override
+        protected void onPreExecute() {
+            displayProgressDialog();
+        }
+    }
+
+    private String processImageOnline() {
+        String server_data = "{\n" +
+                "  \"requests\": [\n" +
+                "    {\n" +
+                "      \"image\": {\n" +
+                "        \"source\": {\n" +
+                "          \"imageUri\": \"http://entebbenews.com/wp-content/uploads/2015/11/The-late-Mark-Kasozi-while-still-alive-331x219.png\"\n" +
+                "        }\n" +
+                "      },\n" +
+                "      \"features\": [\n" +
+                "        {\n" +
+                "          \"type\": \"TEXT_DETECTION\",\n" +
+                "          \"maxResults\": 1\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}";
 
 
+        String jsonString = null;
+        try {
+            jsonString = post("https://vision.googleapis.com/v1/images:annotate?key=AIzaSyDbCP4W2Ru2qxZsGgrR5inBbOOf0X0S54s", server_data);
+            Log.d("JSON#", jsonString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return jsonString;
+    }
+
+    public String post(String url, String json) throws IOException {
+        Log.d("JSON#", "okhttpCall");
+        RequestBody body = RequestBody.create(JSON, json);
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        Response response = client.newCall(request).execute();
+        return response.body().string();
+    }
+
+    private void displayProgressDialog() {
+        pDialog = new ProgressDialog(this);
+        pDialog.setMessage("Please wait...");
+        pDialog.setCancelable(false);
+        pDialog.show();
+    }
+
+    private void dismissProgressDialog() {
+        if (pDialog.isShowing()) {
+            pDialog.dismiss();
+        }
     }
 
     // may need to do this in a different thread(Async Task)
