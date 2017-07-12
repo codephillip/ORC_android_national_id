@@ -21,6 +21,8 @@ import com.google.android.gms.vision.text.TextRecognizer;
  *
  * NOTE:
  * Make sure the device has atleast 400mb of RAM
+ * Atleast 3GB of storage
+ * Device must have Google Play Services installed
  *
  * CREDIT:
  * https://www.youtube.com/watch?v=f4HUUPs91kw
