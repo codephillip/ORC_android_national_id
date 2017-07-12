@@ -19,6 +19,9 @@ import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 
 import okhttp3.MediaType;
@@ -111,12 +114,33 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String result) {
             Log.d(TAG, "onPostExecute: " + result);
+            extractJsonData(result);
             dismissProgressDialog();
         }
 
         @Override
         protected void onPreExecute() {
             displayProgressDialog();
+        }
+    }
+
+    private void extractJsonData(String result) {
+        try {
+            JSONObject jsonObject = new JSONObject(result);
+            String description = jsonObject
+                    .getJSONArray("responses").getJSONObject(0)
+                    .getJSONArray("textAnnotations").getJSONObject(0)
+                    .getString("description");
+
+            String[] parts = description.split("\n");
+            String lastName = parts[2];
+            String firstName = parts[3];
+            String nin = parts[5].substring(0, 15);
+
+            Log.d(TAG, "extractJsonData: " + lastName + firstName + nin);
+            Log.d(TAG, "extractJsonData: " + description);
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
     }
 
