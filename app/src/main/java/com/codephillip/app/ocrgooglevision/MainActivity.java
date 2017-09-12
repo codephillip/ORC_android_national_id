@@ -32,7 +32,8 @@ import okhttp3.Response;
 
 /**
  * ABOUT:
- * (OCR) Extract text from image using Google Vision api
+ * (OCR) Extract text from image using Google Vision api (works with Internet)
+ * And play-services-vision api (works locally)
  * <p>
  * NOTE:
  * Make sure the device has atleast 400mb of RAM
@@ -56,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
 
     OkHttpClient client = new OkHttpClient();
     private ProgressDialog pDialog;
+    private Bitmap bitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,11 +90,13 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             bmp = (Bitmap) extras.get("data");
+            bitmap = (Bitmap) extras.get("data");
             picture.setImageBitmap(bmp);
+            processImage();
 
             Log.d(TAG, "onActivityResult: starting async task");
-            AsyncTaskRunner runner = new AsyncTaskRunner();
-            runner.execute();
+//            AsyncTaskRunner runner = new AsyncTaskRunner();
+//            runner.execute();
         }
     }
 
@@ -204,7 +208,8 @@ public class MainActivity extends AppCompatActivity {
         if (textRecognizer.isOperational()) {
             Log.d(TAG, "processImage: started");
 
-            final Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.credit_card);
+            final Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.national);
+
             picture.setImageBitmap(bitmap);
 
             Frame frame = new Frame.Builder().setBitmap(bitmap).build();
